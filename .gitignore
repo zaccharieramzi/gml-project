@@ -90,3 +90,6 @@ ENV/
 
 # TSV files
 *.tsv
+
+# MAC explorer file
+.DS_Store
