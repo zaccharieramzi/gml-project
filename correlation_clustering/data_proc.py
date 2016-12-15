@@ -88,15 +88,14 @@ def build_user_to_movies(tsvfilename):
     output_dictionary['db_user_id_to_user_id'] = db_user_id_to_user_id
     output_dictionary['db_movies_id_to_movies_id'] = db_movies_id_to_movies_id
     output_dictionary['users_to_movies'] = users_to_movies
-    return [
-        output_dictionary]
+    return output_dictionary
 
 
 def build_A(n_users, n_movies, users_to_movies):
     ''' Build A (ndarray) that summarize the rating of movies by users.
         Args:
-            - n_users : number of users (type: float)
-            - n_movies : number of movies (type: float)
+            - n_users : number of users (type: int)
+            - n_movies : number of movies (type: int)
             - users_to_movies : users rating movies (type: dictionary)
         Output:
             - A (type: ndarray)
@@ -106,7 +105,7 @@ def build_A(n_users, n_movies, users_to_movies):
     A = np.zeros(shape=(n_users, n_movies))
     for user in range(n_users):
         for i, elt in enumerate(users_to_movies[user]):
-            A[user, elt[0]] = elt[1]
+            A[user, int(elt[0])] = float(elt[1])
     return A
 
 
@@ -135,7 +134,9 @@ def build_graph(tsvfilename):
                         output_dictionary['n_movies']
                         ))
     # A in the top right corner, A^T en left down corner
-    W[0:output_dictionary['n_users'], output_dictionary['n_users']:end] = A
-    W[output_dictionary['n_users']:end, 0:output_dictionary['n_users']] = \
-        A.transpose()
+    W[0:output_dictionary['n_users'], output_dictionary['n_users']:
+        output_dictionary['n_users'] + output_dictionary['n_movies']] = A
+    W[output_dictionary['n_users']:
+        output_dictionary['n_users'] + output_dictionary['n_movies'],
+        0:output_dictionary['n_users']] = A.transpose()
     return W
