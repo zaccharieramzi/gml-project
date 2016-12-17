@@ -48,7 +48,7 @@ def assignment_solution(x):
     vectors = set()
     for i in range(v.shape[0]):
         vectors.add(v[:, i])
-    if len(s) == 2:
+    if len(vectors) == 2:
         assignment = v == next(iter(vectors))
         return assignment[0]
     else:
