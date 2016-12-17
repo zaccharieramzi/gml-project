@@ -1,16 +1,6 @@
 import numpy as np
 
 
-def build_graph(tsvfilename):
-    f = open(tsvfilename)
-    line1 = f.readline().split('\t')
-
-    if is_number(line1[0]):
-        lines = np.loadtxt(tsvfilename)
-    else:
-        lines = np.loadtxt(tsvfilename, skiprows=1)
-
-
 def is_number(s):
     ''' Test if the type of the object is float
         Args:
@@ -54,18 +44,21 @@ def build_user_to_movies(tsvfilename):
     else:
         lines = np.loadtxt(tsvfilename, skiprows=1)
 
+    # closing file
+    f.close()
+
     # number of unique users in the tsv
     n_users = np.unique(lines[:, 0]).shape[0]
 
     # number of movies in the tsv
     n_movies = np.unique(lines[:, 1]).shape[0]
 
-    # parcing db users id into {0,..,n_users}
+    # parsing db users id into {0,..,n_users}
     db_user_id_to_user_id = {}
     for index, db_user_id in enumerate(np.unique(lines[:, 0])):
         db_user_id_to_user_id[db_user_id] = index
 
-    # parcing db movies id into {0,..,n_movies}
+    # parsing db movies id into {0,..,n_movies}
     db_movies_id_to_movies_id = {}
     for index, db_movies_id in enumerate(np.unique(lines[:, 1])):
         db_movies_id_to_movies_id[db_movies_id] = index
@@ -99,13 +92,18 @@ def build_A(n_users, n_movies, users_to_movies):
             - users_to_movies : users rating movies (type: dictionary)
         Output:
             - A (type: ndarray)
-        Remark: for now, not watching a movie or giving a grade of 2.5 is equal
+        Remark: we changed the rate 2.5 to 2.6
     '''
 
     A = np.zeros(shape=(n_users, n_movies))
     for user in range(n_users):
+        # 'elt' is a couple (movie,rate)
         for i, elt in enumerate(users_to_movies[user]):
-            A[user, int(elt[0])] = float(elt[1])
+            # clearing up ambiguity concerning a 2.5 rate and non watched movie
+            if float(rating) == 0:
+                A[user, int(elt[0])] = float(elt[1])+0.1
+            else:
+                A[user, int(elt[0])] = float(elt[1])
     return A
 
 
