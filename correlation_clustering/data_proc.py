@@ -97,13 +97,12 @@ def build_A(n_users, n_movies, users_to_movies):
 
     A = np.zeros(shape=(n_users, n_movies))
     for user in range(n_users):
-        # 'elt' is a couple (movie,rate)
-        for i, elt in enumerate(users_to_movies[user]):
+        for i, (movie_id, rating) in enumerate(users_to_movies[user]):
             # clearing up ambiguity concerning a 2.5 rate and non watched movie
             if float(rating) == 0:
-                A[user, int(elt[0])] = float(elt[1])+0.1
+                A[user, int(movie_id)] = 0.1
             else:
-                A[user, int(elt[0])] = float(elt[1])
+                A[user, int(movie_id)] = float(rating)
     return A
 
 
