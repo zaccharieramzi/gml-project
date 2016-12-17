@@ -41,7 +41,7 @@ def assignment_solution(x):
         Args:
             - x (n.matrix): the solution of the SDP
         Outputs:
-            - list of bool: assignment for each node to a certain cluster if
+            - list of int: assignment for each node to a certain cluster if
                 solution is integral, False otherwise.
     '''
     v = np.linalg.cholesky(x)
@@ -49,7 +49,9 @@ def assignment_solution(x):
     for i in range(v.shape[0]):
         vectors.add(v[:, i])
     if len(vectors) == 2:
-        assignment = v == next(iter(vectors))
-        return assignment[0]
+        assignment = v.T == next(iter(vectors))
+        assignment = assignment.astype(int)
+        assignment = np.prod(assignment)
+        return assignment
     else:
         return False
