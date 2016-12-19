@@ -6,7 +6,7 @@ def is_number(s):
         Args:
             - s (object)
         Output:
-            - boolean
+            - boolean: True if s is a number
     '''
     try:
         float(s)
@@ -19,7 +19,7 @@ def build_user_to_movies(tsvfilename):
 
     ''' Read the tsv file and create the useful tools for the graph construction
         Args:
-            - tsvfilename : tsv file with 3 columns: user movie rating
+            - tsvfilename (str): tsv file with 3 columns: user movie rating
         Output:
             - dictionary of 5 items
                 - key: n_users - value: number of users
@@ -84,56 +84,41 @@ def build_user_to_movies(tsvfilename):
     return output_dictionary
 
 
-def build_A(n_users, n_movies, users_to_movies):
-    ''' Build A (ndarray) that summarize the rating of movies by users.
+def build_a(n_users, n_movies, users_to_movies):
+    ''' Build  (ndarray) that summarize the rating of movies by users.
         Args:
-            - n_users : number of users (type: int)
-            - n_movies : number of movies (type: int)
-            - users_to_movies : users rating movies (type: dictionary)
+            - n_users (int): number of users
+            - n_movies (int): number of movies
+            - users_to_movies (dict): users rating movies
         Output:
-            - A (type: ndarray)
+            - a (ndarray): [i, j] gives the rating of user i to film j
         Remark: we changed the rate 2.5 to 2.6
     '''
 
-    A = np.zeros(shape=(n_users, n_movies))
+    a = np.zeros(shape=(n_users, n_movies))
     for user in range(n_users):
         for i, (movie_id, rating) in enumerate(users_to_movies[user]):
             # clearing up ambiguity concerning a 2.5 rate and non watched movie
             if float(rating) == 0:
-                A[user, int(movie_id)] = 0.1
+                a[user, int(movie_id)] = 0.1
             else:
-                A[user, int(movie_id)] = float(rating)
-    return A
+                a[user, int(movie_id)] = float(rating)
+    return a
 
 
-def build_graph(tsvfilename):
-    ''' Build W (ndarray) the adjacency matrix of the graph.
+def build_graph(n_users, n_movies, a):
+    ''' Build w (ndarray) the adjacency matrix of the graph.
         Args:
-            - tsvfilename (string): the source file for the graph construction
+            - n_users (int): number of users
+            - n_movies (int): number of movies
+            - a (ndarray): the matrix giving the rating of a movie by a user
         Output:
-            - W (ndarray): adjacency matrix
-        Remark: for now, not watching a movie or giving a grade of 2.5 is equal
+            - w (ndarray): adjacency matrix
     '''
-    # read file
-    output_dictionary = build_user_to_movies(tsvfilename)
-
-    # construct A using the specialized function
-    A = build_A(output_dictionary['n_users'],
-                output_dictionary['n_movies'],
-                output_dictionary['users_to_movies']
-                )
-    # build W
-
+    n = n_users + n_movies
     # size (n_users + n_movies, n_users + n_movies)
-    W = np.zeros(shape=(output_dictionary['n_users'] +
-                        output_dictionary['n_movies'],
-                        output_dictionary['n_users'] +
-                        output_dictionary['n_movies']
-                        ))
+    w = np.zeros([n, n])
     # A in the top right corner, A^T en left down corner
-    W[0:output_dictionary['n_users'], output_dictionary['n_users']:
-        output_dictionary['n_users'] + output_dictionary['n_movies']] = A
-    W[output_dictionary['n_users']:
-        output_dictionary['n_users'] + output_dictionary['n_movies'],
-        0:output_dictionary['n_users']] = A.transpose()
-    return W
+    w[0:n_users, n_users:n] = a
+    w[n_users:n, 0:n_users] = a.transpose()
+    return w
