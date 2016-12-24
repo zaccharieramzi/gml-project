@@ -55,7 +55,7 @@ def solve_sdp(w, d=None, solver='cvxopt'):
     return prob.solve(solver=solver, verbose=0)
 
 
-def assignment_solution(x):
+def assignment_solution(v):
     ''' Checks whether the solution returned by the SDP is integral, and if it
     is, returns the assignment defined by v.
         Args:
