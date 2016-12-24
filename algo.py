@@ -27,7 +27,7 @@ def solve_sdp(w, d=None, solver='cvxopt'):
     )
     # All indicators on unit sphere
     prob.add_list_of_constraints(
-        [pic.norm(v[:, i])**2 == 1 for in range(n)],
+        [pic.norm(v[:, i])**2 == 1 for i in range(n)],
         'i',
         'nodes')
 
