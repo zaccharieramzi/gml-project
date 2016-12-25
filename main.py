@@ -1,3 +1,4 @@
+from algo import solve_sdp, assignment_solution
 from data_proc import build_a, build_graph, build_user_to_movies
 
 # building the summary dictionary
@@ -10,3 +11,7 @@ n_movies = summary_dictionary['n_movies']
 a = build_a(n_users, n_movies, users_to_movies)
 # building the adjacency matrix
 w = build_graph(n_users, n_movies, a)
+
+v = solve_sdp(w, d=5)
+a = assignment_solution(v)
+print(type(a))

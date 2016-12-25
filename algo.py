@@ -19,8 +19,12 @@ def solve_sdp(w, d=None, solver='cvxopt'):
     node_couples = [(i, j) for i in range(n) for j in range(n)]
     node_triples = [
         (i, j, k) for i in range(n) for j in range(n) for k in range(n)]
+
+    def sqdist(u, v):
+        return pic.norm(u - v)**2
+
     prob.set_objective('max', pic.sum(
-        [w[e]*pic.norm(v[:, e[0]]-v[:, e[1]], 2)**2 for e in node_couples],
+        [w[e] * sqdist(v[:, e[0]], v[:, e[1]]) for e in node_couples],
         [('e', 2)],
         'node couples'
         )
@@ -30,9 +34,6 @@ def solve_sdp(w, d=None, solver='cvxopt'):
         [pic.norm(v[:, i])**2 == 1 for i in range(n)],
         'i',
         'nodes')
-
-    def sqdist(u, v):
-        return pic.norm(u - v)**2
 
     # First triangular inequality
     prob.add_list_of_constraints(
