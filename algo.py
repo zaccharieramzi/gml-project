@@ -24,6 +24,7 @@ def solve_sdp(L, triangle_inequalities=False, solver='cvxopt'):
             - ndarray : the solution of the SDP
     '''
     n = L.shape[0]
+    prob = pic.Problem()
     X = prob.add_variable('X', (n, n), 'symmetric')
     if triangle_inequalities:
         node_triples = [
