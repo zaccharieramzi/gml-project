@@ -84,10 +84,11 @@ def build_user_to_movies(tsvfilename):
     return output_dictionary
 
 
-def build_a(n_users, n_movies, users_to_movies):
+def build_a(n_users,k_users, n_movies, users_to_movies):
     ''' Build  (ndarray) that summarize the rating of movies by users.
         Args:
-            - n_users (int): number of users
+            - k_users (int): number of users considered < n_users
+            - n_users (int): total number of users
             - n_movies (int): number of movies
             - users_to_movies (dict): users rating movies
         Output:
@@ -95,8 +96,8 @@ def build_a(n_users, n_movies, users_to_movies):
         Remark: we changed the rate 2.5 to 2.6
     '''
 
-    a = np.zeros(shape=(n_users, n_movies))
-    for user in range(n_users):
+    a = np.zeros(shape=(k_users, n_movies))
+    for user in np.random.choice(range(n_users), k_users, False):
         for i, (movie_id, rating) in enumerate(users_to_movies[user]):
             # clearing up ambiguity concerning a 2.5 rate and non watched movie
             if float(rating) == 0:
@@ -106,19 +107,19 @@ def build_a(n_users, n_movies, users_to_movies):
     return a
 
 
-def build_graph(n_users, n_movies, a):
+def build_graph(k_users, n_movies, a):
     ''' Build w (ndarray) the adjacency matrix of the graph.
         Args:
-            - n_users (int): number of users
+            - k_users (int): number of users considered
             - n_movies (int): number of movies
             - a (ndarray): the matrix giving the rating of a movie by a user
         Output:
             - w (ndarray): adjacency matrix
     '''
-    n = n_users + n_movies
+    n = k_users + n_movies
     # size (n_users + n_movies, n_users + n_movies)
     w = np.zeros([n, n])
     # A in the top right corner, A^T en left down corner
-    w[0:n_users, n_users:n] = a
-    w[n_users:n, 0:n_users] = a.transpose()
+    w[0:k_users, k_users:n] = a
+    w[k_users:n, 0:k_users] = a.transpose()
     return w

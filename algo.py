@@ -3,74 +3,82 @@ import numpy as np
 import picos as pic
 
 
-def solve_sdp(w, d=None, solver='cvxopt'):
-    ''' Solves the SDP relaxation of the max-cut problem associated with the
-    graph w.
+def build_laplacian(W):
+    ''' Out of the adjacency matrix, builds the laplacian of the graph
         Args:
-            - w (np.matrix): the adjacency matrix
+            - W (ndarray): the adjacency matrix
         Outputs:
-            - np.matrix : the solution of the SDP
+            - ndarray: the laplacian of the graph
     '''
-    n = w.shape[0]
-    if not(d):
-        d = n
+    degrees = np.sum(W, axis=1)
+    D = np.diag(degrees)  # the degree matrix
+    return D - W
+
+
+def solve_sdp(L, triangle_inequalities=False, solver='cvxopt'):
+    ''' Solves the SDP relaxation (stengthened if specified) of the max-cut
+    problem associated with the graph given by its laplacian L.
+        Args:
+            - L (ndarray): the graph laplacian
+        Outputs:
+            - ndarray : the solution of the SDP
+    '''
+    n = L.shape[0]
     prob = pic.Problem()
-    v = prob.add_variable('v', (n, d))
-    node_couples = [(i, j) for i in range(n) for j in range(n)]
-    node_triples = [
-        (i, j, k) for i in range(n) for j in range(n) for k in range(n)]
-    prob.set_objective('max', pic.sum(
-        [w[e]*pic.norm(v[:, e[0]]-v[:, e[1]], 2)**2 for e in node_couples],
-        [('e', 2)],
-        'node couples'
-        )
-    )
-    # All indicators on unit sphere
-    prob.add_list_of_constraints(
-        [pic.norm(v[:, i])**2 == 1 for in range(n)],
-        'i',
-        'nodes')
+    X = prob.add_variable('X', (n, n), 'symmetric')
+    if triangle_inequalities:
+        node_triples = [
+            (i, j, k) for i in range(n) for j in range(n) for k in range(n)]
 
-    def sqdist(u, v):
-        return pic.norm(u - v)**2
+    L_param = pic.new_param('L', L)
+    # Objective
+    prob.set_objective('max', L_param | X)
+    # Ones on the diagonal
+    prob.add_constraint(pic.tools.diag_vect(X) == 1)
+    # X positive semidefinite
+    prob.add_constraint(X >> 0)
 
-    # First triangular inequality
-    prob.add_list_of_constraints(
-        [sqdist(v[:, t[0]], v[:, t[1]]) + sqdist(v[:, t[1]], v[:, t[2]]) >=
-         sqdist(v[:, t[0]], v[:, t[2]]) for t in node_triples],
-        't',
-        'node triples')
-    # Second triangular inequality
-    prob.add_list_of_constraints(
-        [sqdist(v[:, t[0]], v[:, t[1]]) + sqdist(v[:, t[1]], -v[:, t[2]]) >=
-         sqdist(v[:, t[0]], -v[:, t[2]]) for t in node_triples],
-        't',
-        'node triples')
-    # Third triangular inequality
-    prob.add_list_of_constraints(
-        [sqdist(v[:, t[0]], -v[:, t[1]]) + sqdist(v[:, t[1]], -v[:, t[2]]) >=
-         sqdist(v[:, t[0]], v[:, t[2]]) for t in node_triples],
-        't',
-        'node triples')
+    if triangle_inequalities:
+        # First triangle inequality
+        prob.add_list_of_constraints(
+            [X[i, j] + X[j, k] + X[k, i] > -1 for (i, j, k) in node_triples],
+            ['i', 'j', 'k'],
+            'node triples')
+        # Second triangle inequality
+        prob.add_list_of_constraints(
+            [X[i, j] - X[j, k] - X[k, i] > -1 for (i, j, k) in node_triples],
+            ['i', 'j', 'k'],
+            'node triples')
+        # Third triangle inequality
+        prob.add_list_of_constraints(
+            [-X[i, j] + X[j, k] - X[k, i] > -1 for (i, j, k) in node_triples],
+            ['i', 'j', 'k'],
+            'node triples')
+        # Fourth triangle inequality
+        prob.add_list_of_constraints(
+            [-X[i, j] - X[j, k] + X[k, i] > -1 for (i, j, k) in node_triples],
+            ['i', 'j', 'k'],
+            'node triples')
     return prob.solve(solver=solver, verbose=0)
 
 
-def assignment_solution(x):
+def assignment_solution(X):
     ''' Checks whether the solution returned by the SDP is integral, and if it
-    is, returns the assignment defined by v.
+    is, returns the assignment defined by X.
         Args:
-            - v (n.matrix): the solution of the SDP
+            - X (ndarray): the solution of the SDP
         Outputs:
-            - list of int: assignment for each node to a certain cluster if
+            - list of bool: assignment for each node to a certain cluster if
                 solution is integral, False otherwise.
     '''
+    V = np.linalg.cholesky(X)
     vectors = set()
-    for i in range(v.shape[0]):
-        vectors.add(v[:, i])
+    for i in range(V.shape[0]):
+        vectors.add(V[:, i])
     if len(vectors) == 2:
-        assignment = v.T == next(iter(vectors))
+        assignment = V == next(iter(Vectors))
         assignment = assignment.astype(int)
         assignment = np.prod(assignment)
-        return assignment
+        return assignment[0]
     else:
         return False
