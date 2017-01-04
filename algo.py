@@ -62,16 +62,24 @@ def solve_sdp(L, triangle_inequalities=False, solver='cvxopt'):
     return prob.solve(solver=solver, verbose=0)
 
 
-def assignment_solution(X):
+def assignment_solution(X, decomp="cholesky"):
     ''' Checks whether the solution returned by the SDP is integral, and if it
-    is, returns the assignment defined by X.
+    is, returns the assignment defined by X via a Cholesky factorization or a
+    singular value decomposition.
         Args:
             - X (ndarray): the solution of the SDP
         Outputs:
             - list of bool: assignment for each node to a certain cluster if
                 solution is integral, False otherwise.
     '''
-    V = np.linalg.cholesky(X)
+    if decomp == "cholesky":
+        V = np.linalg.cholesky(X)
+    elif decomp == "svd":
+        U, S, V = np.linalg.svd(X)
+        S = np.sqrt(S)
+        V = U.dot(np.diag(S))
+    else:
+        raise ValueError("Decomposition has to be cholesky or svd")
     vectors = set()
     for i in range(V.shape[0]):
         vectors.add(V[:, i])
