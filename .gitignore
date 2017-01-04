@@ -94,3 +94,6 @@ ENV/
 
 # MAC explorer file
 .DS_Store
+
+# maintest file
+maintest.py
