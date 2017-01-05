@@ -63,7 +63,7 @@ def solve_sdp(L, triangle_inequalities=False, solver='cvxopt'):
     return X.value
 
 
-def assignment_solution(X, decomp="cholesky"):
+def assignment_solution(X):
     ''' Checks whether the solution returned by the SDP is integral, and if it
     is, returns the assignment defined by X.
         Args:
@@ -72,11 +72,8 @@ def assignment_solution(X, decomp="cholesky"):
             - list of bool: assignment for each node to a certain cluster if
                 solution is integral, False otherwise.
     '''
-    vectors = np.vstack({tuple(col) for col in X.T})
-    if len(vectors) == 2:
-        assignment = X == next(iter(vectors))
-        assignment = assignment.astype(int)
-        assignment = np.prod(assignment)
-        return assignment[0]
+    scalar_products = sorted(list(np.unique(X)))
+    if scalar_products == [-1, 1]:
+        return X[0, :].astype(bool)
     else:
         return False
