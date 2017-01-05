@@ -84,7 +84,7 @@ def build_user_to_movies(tsvfilename):
     return output_dictionary
 
 
-def build_a(n_users,k_users, n_movies, users_to_movies):
+def build_a(n_users, k_users, n_movies, k_movies, users_to_movies):
     ''' Build  (ndarray) that summarize the rating of movies by users.
         Args:
             - k_users (int): number of users considered < n_users
@@ -96,18 +96,37 @@ def build_a(n_users,k_users, n_movies, users_to_movies):
         Remark: we changed the rate 2.5 to 2.6
     '''
 
-    a = np.zeros(shape=(k_users, n_movies))
-    for user in np.random.choice(range(n_users), k_users, False):
+    a = np.zeros(shape=(k_users, k_movies))
+    selected_users = np.random.choice(range(n_users), k_users, False)
+    new_user_id = {}
+    # reattribute an id between 0 and k_users-1 to the selected users
+    for index, old_user_id in enumerate(selected_users):
+        new_user_id[old_user_id] = index
+    # list the movies seen by users selected
+    for user in selected_users:
+        seen_movies_id = set()
+        for i, (movie_id, rating) in enumerate(users_to_movies[user]):
+            seen_movies_id.add(movie_id)
+    # select k_movies movie_id within the list seen_movies_id
+    list_seen_movies_id = list(seen_movies_id)
+    k_movies_selected = np.random.choice(list_seen_movies_id, k_movies, False)
+    new_movie_id = {}
+    # reattribute an id between 0 and k_movies-1 to the slected movies
+    for index, old_movie_id in enumerate(k_movies_selected):
+        new_movie_id[old_movie_id] = index
+    for user in selected_users:
         for i, (movie_id, rating) in enumerate(users_to_movies[user]):
             # clearing up ambiguity concerning a 2.5 rate and non watched movie
-            if float(rating) == 0:
-                a[user, int(movie_id)] = 0.1
-            else:
-                a[user, int(movie_id)] = float(rating)
+            if movie_id in k_movies_selected:
+                if float(rating) == 0:
+                    a[new_user_id[user], new_movie_id[movie_id]] = 0.1
+                else:
+                    a[new_user_id[user],
+                        new_movie_id[movie_id]] = float(rating)
     return a
 
 
-def build_graph(k_users, n_movies, a):
+def build_graph(k_users, k_movies, a):
     ''' Build w (ndarray) the adjacency matrix of the graph.
         Args:
             - k_users (int): number of users considered
@@ -116,7 +135,7 @@ def build_graph(k_users, n_movies, a):
         Output:
             - w (ndarray): adjacency matrix
     '''
-    n = k_users + n_movies
+    n = k_users + k_movies
     # size (n_users + n_movies, n_users + n_movies)
     w = np.zeros([n, n])
     # A in the top right corner, A^T en left down corner
