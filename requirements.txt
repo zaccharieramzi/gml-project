@@ -2,3 +2,7 @@ numpy==1.11.3
 cvxopt==1.1.9
 PICOS==1.1.2
 six==1.10.0
+jupyter==1.0.0
+jupyter-client==4.4.0
+jupyter-console==5.0.0
+jupyter-core==4.2.1

@@ -1,4 +1,3 @@
-import cvxopt as cvx
 import numpy as np
 import picos as pic
 
@@ -59,10 +58,11 @@ def solve_sdp(L, triangle_inequalities=False, solver='cvxopt'):
             [-X[i, j] - X[j, k] + X[k, i] > -1 for (i, j, k) in node_triples],
             ['i', 'j', 'k'],
             'node triples')
-    return prob.solve(solver=solver, verbose=0)
+    print(prob.solve(solver=solver, verbose=0))
+    return X.value
 
 
-def assignment_solution(X):
+def assignment_solution(X, threshold=0.00001):
     ''' Checks whether the solution returned by the SDP is integral, and if it
     is, returns the assignment defined by X.
         Args:
@@ -71,14 +71,14 @@ def assignment_solution(X):
             - list of bool: assignment for each node to a certain cluster if
                 solution is integral, False otherwise.
     '''
-    V = np.linalg.cholesky(X)
-    vectors = set()
-    for i in range(V.shape[0]):
-        vectors.add(V[:, i])
-    if len(vectors) == 2:
-        assignment = V == next(iter(Vectors))
-        assignment = assignment.astype(int)
-        assignment = np.prod(assignment)
-        return assignment[0]
+    rounded_X = np.round(X)
+    gap = np.absolute(rounded_X - X)
+    n = X.shape[0]
+    # we create a variable checking whether the rounding we do is correct
+    rounding = all([gap[i, j] < threshold for i in range(n) for j in range(n)])
+    scalar_products = sorted(
+        list(np.unique([int(round(x)) for x in np.unique(X)])))
+    if scalar_products == [-1, 1] and rounding:
+        return X[0, :] > 0
     else:
         return False
