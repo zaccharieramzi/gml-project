@@ -1,4 +1,3 @@
-import cvxopt as cvx
 import numpy as np
 import picos as pic
 
@@ -72,8 +71,9 @@ def assignment_solution(X):
             - list of bool: assignment for each node to a certain cluster if
                 solution is integral, False otherwise.
     '''
-    scalar_products = sorted(list(np.unique(X)))
+    scalar_products = sorted(
+        list(np.unique([int(round(x)) for x in np.unique(X)])))
     if scalar_products == [-1, 1]:
-        return X[0, :].astype(bool)
+        return X[0, :] > 0
     else:
         return False
