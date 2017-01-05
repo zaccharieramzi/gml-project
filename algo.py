@@ -78,7 +78,7 @@ def assignment_solution(X, threshold=0.00001):
     rounding = all([gap[i, j] < threshold for i in range(n) for j in range(n)])
     scalar_products = sorted(
         list(np.unique([int(round(x)) for x in np.unique(X)])))
-    if scalar_products == [-1, 1] and rouding:
+    if scalar_products == [-1, 1] and rounding:
         return X[0, :] > 0
     else:
         return False
