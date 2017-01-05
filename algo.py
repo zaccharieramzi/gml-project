@@ -62,7 +62,7 @@ def solve_sdp(L, triangle_inequalities=False, solver='cvxopt'):
     return X.value
 
 
-def assignment_solution(X):
+def assignment_solution(X, threshold=0.00001):
     ''' Checks whether the solution returned by the SDP is integral, and if it
     is, returns the assignment defined by X.
         Args:
@@ -71,9 +71,14 @@ def assignment_solution(X):
             - list of bool: assignment for each node to a certain cluster if
                 solution is integral, False otherwise.
     '''
+    rounded_X = np.round(X)
+    gap = np.absolute(rounded_X - X)
+    n = X.shape[0]
+    # we create a variable checking whether the rounding we do is correct
+    rounding = all([gap[i, j] < threshold for i in range(n) for j in range(n)])
     scalar_products = sorted(
         list(np.unique([int(round(x)) for x in np.unique(X)])))
-    if scalar_products == [-1, 1]:
+    if scalar_products == [-1, 1] and rouding:
         return X[0, :] > 0
     else:
         return False
