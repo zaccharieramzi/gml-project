@@ -97,18 +97,31 @@ def build_a(n_users, k_users, n_movies, k_movies, users_to_movies):
     '''
 
     a = np.zeros(shape=(k_users, k_movies))
-    selected_users = np.random.choice(range(n_users), k_users, False)
+    # good_users have seen more than k_movies movies
+    good_users = []
+    for user in range(n_users):
+        if len(users_to_movies[user]) > k_movies-1:
+            good_users.append(user)
+    good_users = np.array(good_users)
+    selected_users = np.random.choice(good_users, k_users, False)
     new_user_id = {}
     # reattribute an id between 0 and k_users-1 to the selected users
     for index, old_user_id in enumerate(selected_users):
         new_user_id[old_user_id] = index
     # list the movies seen by users selected
+    seen_movies_id = {}
     for user in selected_users:
-        seen_movies_id = set()
         for i, (movie_id, rating) in enumerate(users_to_movies[user]):
-            seen_movies_id.add(movie_id)
+            keys = seen_movies_id.keys()
+            if movie_id in keys:
+                seen_movies_id[movie_id] += 1
+            else:
+                seen_movies_id[movie_id] = 1
     # select k_movies movie_id within the list seen_movies_id
-    list_seen_movies_id = list(seen_movies_id)
+    list_seen_movies_id = []
+    for movie_id in seen_movies_id.keys():
+        if seen_movies_id[movie_id] > 1:
+            list_seen_movies_id.append(movie_id)
     k_movies_selected = np.random.choice(list_seen_movies_id, k_movies, False)
     new_movie_id = {}
     # reattribute an id between 0 and k_movies-1 to the slected movies
