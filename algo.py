@@ -1,3 +1,8 @@
+''' The solve_sdp function was inspired by the picos documentation example.
+[1]: http://www.cs.huji.ac.il/~yrabani/Papers/CalinescuKR-JCSS-revised.pdf
+'''
+from itertools import combinations
+
 import networkx as nx
 import numpy as np
 import picos as pic
@@ -85,19 +90,81 @@ def assignment_solution_sdp(X, threshold=0.00001):
         return False
 
 
-def solve_multicut(W, solver='cvxopt'):
-    '''Solves the LP relaxation of the minimum multiway cut problem associated
-    to the graph given by its adjacency matrix W.
+def solve_multicut(W, T, solver='cvxopt'):
+    '''Solves the LP relaxation (LP2 of [1]) of the minimum multiway cut
+    problem associated to the graph given by its adjacency matrix W.
         Args:
             - W (ndarray): the adjacency matrix
+            - T (list): the list of terminal nodes
         Output:
             - ndarray: the solution of the LP
     '''
     G = nx.from_numpy_matrix(W)
+    n = W.shape[0]
+    t = len(T)
+
+    def sub2ind(rows, cols, array_shape=(n, n)):
+        ind = rows*array_shape[1] + cols
+        ind[ind < 0] = -1
+        ind[ind >= array_shape[0]*array_shape[1]] = -1
+        return ind
+
+    node_triples = [
+        (i, j, k) for i in range(n) for j in range(n) for k in range(n)]
+    node_couples = [(i, j) for i in range(n) for j in range(n)]
+    terminal_couples = [(i, j) for i in T for j in T if i != j]
 
     prob = pic.Problem()
-    # objective
+    # Picos params and variables
+    W_param = pic.new_param('W', W)
+    d = prob.add_variable('d', n**2)
+    d_prime = {}
+    for t in T:
+        d_prime[t] = prob.add_variable('d_prime[{0}]'.format(t), n**2)
+    # Objective
     prob.set_objective('min',
-                    pic.sum([cc[e]*d[e] for e in G.edges()],
-                            [('e',2)],'edges')
-                    )
+                       pic.sum([W_param[e]*d[sub2ind((n, n), e)]
+                                for e in G.edges()],
+                               [('e', 2)], 'edges'))
+    # (V, d) semimetric (1)
+    prob.add_list_of_constraints(
+        [d[sub2ind(c)] >= 0 for c in node_couples],
+        [('c', 2)],
+        'node couples')
+    # prob.add_constraint(d >= 0) This constraint is redundant when we add the
+    # complementary constraints due to the addition of d_prime
+    # (2) terminals are far apart
+    prob.add_list_of_constraints(
+        [d[sub2ind(c)] == 1 for c in terminal_couples],
+        [('c', 2)],
+        'terminal couples')
+    # (3) distance should be inferior to 1
+    prob.add_constraint(d <= 1)
+    # (4)
+    prob.add_list_of_constraints(
+        [pic.sum([d[sub2ind((u, t))] for t in T], 't', 'terminals')
+         for u G.nodes()],
+        'u',
+        'nodes')
+    # (5') with d_prime
+    prob.add_list_of_constraints(
+        [d[sub2ind(c)] >= pic.sum([d_prime[t][sub2ind(c)] for t in T],
+                                  't',
+                                  'terminals') for c in node_couples],
+        [('c', 2)],
+        'node couples')
+    # (6') constraints on d_prime
+    prob.add_list_of_constraints(
+        [d_prime[t] >= 0 for t in T],
+        't',
+        'terminals')
+    prob.add_list_of_constraints(
+        [d_prime[t][sub2ind((u, v))] >=
+         d[sub2ind((u, t))] - d[sub2ind((v, t))]
+         for (u, v) in node_couples for t in T],
+        ['u', 'v', 't'],
+        'node couples x terminals')
+    print(prob.solve(solver=solver, verbose=0))
+    return d.value
+
+def assignment_solution_lp(X, threshold=0.00001):
