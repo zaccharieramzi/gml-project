@@ -141,8 +141,6 @@ def solve_multicut(W, T, solver='cvxopt'):
          if c[0] < c[1]],
         [('c', 2)],
         'node couples')
-    # Seems to be problematic may have to do with some kind
-    # of redundance : http://stackoverflow.com/questions/16978763
 
     # positivity is redundant when introducing d prime variable
 
@@ -217,6 +215,7 @@ def assignment_solution_lp(d, T, threshold=0.00001):
         for t in T:
             assignment[t] = [u for u in range(n)
                              if distance_per_node[u, t] == 0]
+        return assignment
     else:
         # The solution is not integral
         return False
