@@ -83,3 +83,21 @@ def assignment_solution_sdp(X, threshold=0.00001):
         return X[0, :] > 0
     else:
         return False
+
+
+def solve_multicut(W, solver='cvxopt'):
+    '''Solves the LP relaxation of the minimum multiway cut problem associated
+    to the graph given by its adjacency matrix W.
+        Args:
+            - W (ndarray): the adjacency matrix
+        Output:
+            - ndarray: the solution of the LP
+    '''
+    G = nx.from_numpy_matrix(W)
+
+    prob = pic.Problem()
+    # objective
+    prob.set_objective('min',
+                    pic.sum([cc[e]*d[e] for e in G.edges()],
+                            [('e',2)],'edges')
+                    )
