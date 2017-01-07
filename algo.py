@@ -104,14 +104,13 @@ def solve_multicut(W, T, solver='cvxopt'):
     n = W.shape[0]
     t = len(T)
 
-    def s2i(rows, cols, array_shape=(n, n)):
+    def s2i(row_col, array_shape=(n, n)):
         '''Equivalent of Matlab sub2ind. From rows and cols (n, n) indices to
         linear index.
         '''
-        ind = rows*array_shape[1] + cols
-        ind[ind < 0] = -1
-        ind[ind >= array_shape[0]*array_shape[1]] = -1
-        return ind
+        row, col = row_col
+        ind = row*array_shape[1] + col
+        return int(ind)
 
     node_triples = [
         (i, j, k) for i in range(n) for j in range(n) for k in range(n)]
@@ -120,14 +119,13 @@ def solve_multicut(W, T, solver='cvxopt'):
 
     prob = pic.Problem()
     # Picos params and variables
-    W_param = pic.new_param('W', W)
     d = prob.add_variable('d', n**2)
     d_prime = {}
     for t in T:
         d_prime[t] = prob.add_variable('d_prime[{0}]'.format(t), n**2)
     # Objective
     prob.set_objective('min',
-                       pic.sum([W_param[e]*d[s2i((n, n), e)]
+                       pic.sum([W[e]*d[s2i(e)]
                                 for e in G.edges()],
                                [('e', 2)], 'edges'))
     # (V, d) semimetric (1)
@@ -148,7 +146,7 @@ def solve_multicut(W, T, solver='cvxopt'):
     # (4)
     prob.add_list_of_constraints(
         [pic.sum([d[s2i((u, t))] for t in T], 't', 'terminals')
-         for u G.nodes()],
+         for u in G.nodes()],
         'u',
         'nodes')
     # (5') with d_prime
