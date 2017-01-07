@@ -1,3 +1,4 @@
+import networkx as nx
 import numpy as np
 import picos as pic
 
@@ -62,7 +63,7 @@ def solve_sdp(L, triangle_inequalities=False, solver='cvxopt'):
     return X.value
 
 
-def assignment_solution(X, threshold=0.00001):
+def assignment_solution_sdp(X, threshold=0.00001):
     ''' Checks whether the solution returned by the SDP is integral, and if it
     is, returns the assignment defined by X.
         Args:
