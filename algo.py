@@ -2,6 +2,7 @@
 [1]: http://www.cs.huji.ac.il/~yrabani/Papers/CalinescuKR-JCSS-revised.pdf
 '''
 from itertools import combinations
+import math
 
 import networkx as nx
 import numpy as np
@@ -103,7 +104,7 @@ def solve_multicut(W, T, solver='cvxopt'):
     n = W.shape[0]
     t = len(T)
 
-    def sub2ind(rows, cols, array_shape=(n, n)):
+    def s2i(rows, cols, array_shape=(n, n)):
         ind = rows*array_shape[1] + cols
         ind[ind < 0] = -1
         ind[ind >= array_shape[0]*array_shape[1]] = -1
@@ -123,34 +124,35 @@ def solve_multicut(W, T, solver='cvxopt'):
         d_prime[t] = prob.add_variable('d_prime[{0}]'.format(t), n**2)
     # Objective
     prob.set_objective('min',
-                       pic.sum([W_param[e]*d[sub2ind((n, n), e)]
+                       pic.sum([W_param[e]*d[s2i((n, n), e)]
                                 for e in G.edges()],
                                [('e', 2)], 'edges'))
     # (V, d) semimetric (1)
     prob.add_list_of_constraints(
-        [d[sub2ind(c)] >= 0 for c in node_couples],
+        [d[s2i(c)] >= 0 for c in node_couples],
         [('c', 2)],
         'node couples')
+
     # prob.add_constraint(d >= 0) This constraint is redundant when we add the
     # complementary constraints due to the addition of d_prime
     # (2) terminals are far apart
     prob.add_list_of_constraints(
-        [d[sub2ind(c)] == 1 for c in terminal_couples],
+        [d[s2i(c)] == 1 for c in terminal_couples],
         [('c', 2)],
         'terminal couples')
     # (3) distance should be inferior to 1
     prob.add_constraint(d <= 1)
     # (4)
     prob.add_list_of_constraints(
-        [pic.sum([d[sub2ind((u, t))] for t in T], 't', 'terminals')
+        [pic.sum([d[s2i((u, t))] for t in T], 't', 'terminals')
          for u G.nodes()],
         'u',
         'nodes')
     # (5') with d_prime
     prob.add_list_of_constraints(
-        [d[sub2ind(c)] >= pic.sum([d_prime[t][sub2ind(c)] for t in T],
-                                  't',
-                                  'terminals') for c in node_couples],
+        [d[s2i(c)] >= pic.sum([d_prime[t][s2i(c)] for t in T],
+                              't',
+                              'terminals') for c in node_couples],
         [('c', 2)],
         'node couples')
     # (6') constraints on d_prime
@@ -159,12 +161,38 @@ def solve_multicut(W, T, solver='cvxopt'):
         't',
         'terminals')
     prob.add_list_of_constraints(
-        [d_prime[t][sub2ind((u, v))] >=
-         d[sub2ind((u, t))] - d[sub2ind((v, t))]
+        [d_prime[t][s2i((u, v))] >=
+         d[s2i((u, t))] - d[s2i((v, t))]
          for (u, v) in node_couples for t in T],
         ['u', 'v', 't'],
         'node couples x terminals')
     print(prob.solve(solver=solver, verbose=0))
     return d.value
 
-def assignment_solution_lp(X, threshold=0.00001):
+
+def assignment_solution_lp(d, T, threshold=0.00001):
+    ''' Checks whether the solution returned by the LP is integral, and if it
+    is, returns the assignment defined by d.
+        Args:
+            - d (ndarray): the solution of the SDP
+            - T (list): the terminal nodes
+        Outputs:
+            - if integral : dict: - key: index of the cluster
+                                  - value: list of nodes in the cluster
+            - False otherwise
+    '''
+    rounded_d = np.round(d)
+    gap = np.absolute(rounded_d - d)
+    n = math.sqrt(len(d))
+    rounding = all([gap[i] < threshold for idx in range(n**2)])
+    distances = sorted(list(np.unique(rounded_d)))
+    assignment = dict()
+    if rounding and distances == [0, 1]:
+        # Then we have an integral solution
+        distance_per_node = np.reshape(rounded_d, (n, n))
+        for t in T:
+            assignment[t] = [u for u in range(n)
+                             if distance_per_node[u, t] == 0]
+    else:
+        # The solution is not integral
+        return False
