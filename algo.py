@@ -129,30 +129,46 @@ def solve_multicut(W, T, solver='cvxopt'):
                                 for e in G.edges()],
                                [('e', 2)], 'edges'))
     # (V, d) semimetric (1)
+    # distance between a node and itself must be 0.
     prob.add_list_of_constraints(
         [d[s2i((u, u))] == 0 for u in G.nodes()],
         'u',
         'nodes')
+
+    # distance must be symmetric
     # prob.add_list_of_constraints(
     #     [d[s2i(c)] == d[s2i((c[1], c[0]))] for c in node_couples],
     #     [('c', 2)],
     #     'node couples') Seems to be problematic may have to do with some kind
     # of redundance : http://stackoverflow.com/questions/16978763
+
+    # distance must be positive
     # prob.add_constraint(d >= 0) This constraint is redundant when we add the
     # complementary constraints due to the addition of d_prime
+
+    # distance must satisfy triangle inequality
+    prob.add_list_of_constraints(
+        [d[s2i((u, w))] <= d[s2i((u, v))] + d[s2i((v, w))]
+         for (u, v, w) in node_triples],
+        ['u', 'v', 'w'],
+        'nodes x nodes x nodes')
+
     # (2) terminals are far apart
     prob.add_list_of_constraints(
         [d[s2i(c)] == 1 for c in terminal_couples],
         [('c', 2)],
         'terminal couples')
+
     # (3) distance should be inferior to 1
     prob.add_constraint(d <= 1)
+
     # (4)
     prob.add_list_of_constraints(
         [pic.sum([d[s2i((u, t))] for t in T], 't', 'terminals') == K-1
          for u in G.nodes()],
         'u',
         'nodes')
+
     # (5') with d_prime
     prob.add_list_of_constraints(
         [d[s2i(c)] >= pic.sum([d_prime[t][s2i(c)] for t in T],
@@ -160,6 +176,7 @@ def solve_multicut(W, T, solver='cvxopt'):
                               'terminals') for c in node_couples],
         [('c', 2)],
         'node couples')
+
     # (6') constraints on d_prime
     prob.add_list_of_constraints(
         [d_prime[t] >= 0 for t in T],
