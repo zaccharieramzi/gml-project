@@ -134,9 +134,14 @@ def solve_multicut(W, T, solver='cvxopt'):
         [('c', 2)],
         'node couples')
     prob.add_list_of_constraints(
-        [d[s2i(c)] == d[s2i((c[1], c[0]))] for c in node_couples],
-        [('c', 2)],
-        'node couples')
+        [d[s2i((u, u))] == 0 for u in G.nodes()],
+        'u',
+        'nodes')
+    # prob.add_list_of_constraints(
+    #     [d[s2i(c)] == d[s2i((c[1], c[0]))] for c in node_couples],
+    #     [('c', 2)],
+    #     'node couples') Seems to be problematic may have to do with some kind
+    # of redundance : http://stackoverflow.com/questions/16978763
     # prob.add_constraint(d >= 0) This constraint is redundant when we add the
     # complementary constraints due to the addition of d_prime
     # (2) terminals are far apart
