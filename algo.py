@@ -105,6 +105,9 @@ def solve_multicut(W, T, solver='cvxopt'):
     t = len(T)
 
     def s2i(rows, cols, array_shape=(n, n)):
+        '''Equivalent of Matlab sub2ind. From rows and cols (n, n) indices to
+        linear index.
+        '''
         ind = rows*array_shape[1] + cols
         ind[ind < 0] = -1
         ind[ind >= array_shape[0]*array_shape[1]] = -1
