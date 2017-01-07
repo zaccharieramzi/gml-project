@@ -115,7 +115,7 @@ def solve_multicut(W, T, solver='cvxopt'):
     node_triples = [
         (i, j, k) for i in range(n) for j in range(n) for k in range(n)]
     node_couples = [(i, j) for i in range(n) for j in range(n)]
-    terminal_couples = [(i, j) for i in T for j in T if i != j]
+    terminal_couples = [(i, j) for i in T for j in T if i < j]
 
     prob = pic.Problem()
     # Picos params and variables
