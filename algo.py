@@ -130,10 +130,6 @@ def solve_multicut(W, T, solver='cvxopt'):
                                [('e', 2)], 'edges'))
     # (V, d) semimetric (1)
     prob.add_list_of_constraints(
-        [d[s2i(c)] >= 0 for c in node_couples],
-        [('c', 2)],
-        'node couples')
-    prob.add_list_of_constraints(
         [d[s2i((u, u))] == 0 for u in G.nodes()],
         'u',
         'nodes')
