@@ -130,10 +130,10 @@ def solve_multicut(W, T, solver='cvxopt'):
                                [('e', 2)], 'edges'))
     # (V, d) semimetric (1)
     # distance between a node and itself must be 0.
-    prob.add_list_of_constraints(
-        [d[s2i((u, u))] == 0 for u in G.nodes()],
-        'u',
-        'nodes')
+    # prob.add_list_of_constraints(
+    #     [d[s2i((u, u))] == 0 for u in G.nodes()],
+    #     'u',
+    #     'nodes')
 
     # distance must be symmetric
     # prob.add_list_of_constraints(
@@ -147,11 +147,11 @@ def solve_multicut(W, T, solver='cvxopt'):
     # complementary constraints due to the addition of d_prime
 
     # distance must satisfy triangle inequality
-    prob.add_list_of_constraints(
-        [d[s2i((u, w))] <= d[s2i((u, v))] + d[s2i((v, w))]
-         for (u, v, w) in node_triples],
-        ['u', 'v', 'w'],
-        'nodes x nodes x nodes')
+    # prob.add_list_of_constraints(
+    #     [d[s2i((u, w))] <= d[s2i((u, v))] + d[s2i((v, w))]
+    #      for (u, v, w) in node_triples],
+    #     ['u', 'v', 'w'],
+    #     'nodes x nodes x nodes')
 
     # (2) terminals are far apart
     prob.add_list_of_constraints(
@@ -205,7 +205,7 @@ def assignment_solution_lp(d, T, threshold=0.00001):
     '''
     rounded_d = np.round(d)
     gap = np.absolute(rounded_d - d)
-    n = math.sqrt(len(d))
+    n = int(math.sqrt(len(d)))
     rounding = all([gap[i] < threshold for idx in range(n**2)])
     distances = sorted(list(np.unique(rounded_d)))
     assignment = dict()
