@@ -130,21 +130,21 @@ def solve_multicut(W, T, solver='cvxopt'):
                                [('e', 2)], 'edges'))
     # (V, d) semimetric (1)
     # distance between a node and itself must be 0.
-    # prob.add_list_of_constraints(
-    #     [d[s2i((u, u))] == 0 for u in G.nodes()],
-    #     'u',
-    #     'nodes')
+    prob.add_list_of_constraints(
+        [d[s2i((u, u))] == 0 for u in G.nodes()],
+        'u',
+        'nodes')
 
     # distance must be symmetric
-    # prob.add_list_of_constraints(
-    #     [d[s2i(c)] == d[s2i((c[1], c[0]))] for c in node_couples],
-    #     [('c', 2)],
-    #     'node couples') Seems to be problematic may have to do with some kind
+    prob.add_list_of_constraints(
+        [d[s2i(c)] == d[s2i((c[1], c[0]))] for c in node_couples
+         if c[0] < c[1]],
+        [('c', 2)],
+        'node couples')
+    # Seems to be problematic may have to do with some kind
     # of redundance : http://stackoverflow.com/questions/16978763
 
-    # distance must be positive
-    # prob.add_constraint(d >= 0) This constraint is redundant when we add the
-    # complementary constraints due to the addition of d_prime
+    # positivity is redundant when introducing d prime variable
 
     # distance must satisfy triangle inequality
     prob.add_list_of_constraints(
@@ -160,7 +160,9 @@ def solve_multicut(W, T, solver='cvxopt'):
         'terminal couples')
 
     # (3) distance should be inferior to 1
-    prob.add_constraint(d <= 1)
+    prob.add_list_of_constraints(
+        [d[s2i(c)] <= 1 for c in node_couples
+         if (not((c[0] in T) and (c[1] in T)) and c[0] != c[1])])
 
     # (4)
     prob.add_list_of_constraints(
@@ -206,7 +208,7 @@ def assignment_solution_lp(d, T, threshold=0.00001):
     rounded_d = np.round(d)
     gap = np.absolute(rounded_d - d)
     n = int(math.sqrt(len(d)))
-    rounding = all([gap[i] < threshold for idx in range(n**2)])
+    rounding = all([gap[idx] < threshold for idx in range(n**2)])
     distances = sorted(list(np.unique(rounded_d)))
     assignment = dict()
     if rounding and distances == [0, 1]:
