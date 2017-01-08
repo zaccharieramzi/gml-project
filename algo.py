@@ -1,3 +1,10 @@
+''' The solve_sdp function was inspired by the picos documentation example.
+[1]: http://www.cs.huji.ac.il/~yrabani/Papers/CalinescuKR-JCSS-revised.pdf
+'''
+from itertools import combinations
+import math
+
+import networkx as nx
 import numpy as np
 import picos as pic
 
@@ -62,7 +69,7 @@ def solve_sdp(L, triangle_inequalities=False, solver='cvxopt'):
     return X.value
 
 
-def assignment_solution(X, threshold=0.00001):
+def assignment_solution_sdp(X, threshold=0.00001):
     ''' Checks whether the solution returned by the SDP is integral, and if it
     is, returns the assignment defined by X.
         Args:
@@ -81,4 +88,134 @@ def assignment_solution(X, threshold=0.00001):
     if scalar_products == [-1, 1] and rounding:
         return X[0, :] > 0
     else:
+        return False
+
+
+def solve_multicut(W, T, solver='cvxopt'):
+    '''Solves the LP relaxation (LP2 of [1]) of the minimum multiway cut
+    problem associated to the graph given by its adjacency matrix W.
+        Args:
+            - W (ndarray): the adjacency matrix
+            - T (list): the list of terminal nodes
+        Output:
+            - ndarray: the solution of the LP
+    '''
+    G = nx.from_numpy_matrix(W)
+    n = W.shape[0]
+    K = len(T)
+
+    def s2i(row_col, array_shape=(n, n)):
+        '''Equivalent of Matlab sub2ind. From rows and cols (n, n) indices to
+        linear index.
+        '''
+        row, col = row_col
+        ind = row*array_shape[1] + col
+        return int(ind)
+
+    node_triples = [
+        (i, j, k) for i in range(n) for j in range(n) for k in range(n)]
+    node_couples = [(i, j) for i in range(n) for j in range(n)]
+    terminal_couples = [(i, j) for i in T for j in T if i < j]
+
+    prob = pic.Problem()
+    # Picos params and variables
+    d = prob.add_variable('d', n**2)
+    d_prime = {}
+    for t in T:
+        d_prime[t] = prob.add_variable('d_prime[{0}]'.format(t), n**2)
+    # Objective
+    prob.set_objective('min',
+                       pic.sum([W[e]*d[s2i(e)]
+                                for e in G.edges()],
+                               [('e', 2)], 'edges'))
+    # (V, d) semimetric (1)
+    # distance between a node and itself must be 0.
+    prob.add_list_of_constraints(
+        [d[s2i((u, u))] == 0 for u in G.nodes()],
+        'u',
+        'nodes')
+
+    # distance must be symmetric
+    prob.add_list_of_constraints(
+        [d[s2i(c)] == d[s2i((c[1], c[0]))] for c in node_couples
+         if c[0] < c[1]],
+        [('c', 2)],
+        'node couples')
+
+    # positivity is redundant when introducing d prime variable
+
+    # distance must satisfy triangle inequality
+    prob.add_list_of_constraints(
+        [d[s2i((u, w))] <= d[s2i((u, v))] + d[s2i((v, w))]
+         for (u, v, w) in node_triples],
+        ['u', 'v', 'w'],
+        'nodes x nodes x nodes')
+
+    # (2) terminals are far apart
+    prob.add_list_of_constraints(
+        [d[s2i(c)] == 1 for c in terminal_couples],
+        [('c', 2)],
+        'terminal couples')
+
+    # (3) distance should be inferior to 1
+    prob.add_list_of_constraints(
+        [d[s2i(c)] <= 1 for c in node_couples
+         if (not((c[0] in T) and (c[1] in T)) and c[0] != c[1])])
+
+    # (4)
+    prob.add_list_of_constraints(
+        [pic.sum([d[s2i((u, t))] for t in T], 't', 'terminals') == K-1
+         for u in G.nodes() if u not in T],
+        'u',
+        'nodes')
+
+    # (5') with d_prime
+    prob.add_list_of_constraints(
+        [d[s2i(c)] >= pic.sum([d_prime[t][s2i(c)] for t in T],
+                              't',
+                              'terminals') for c in node_couples],
+        [('c', 2)],
+        'node couples')
+
+    # (6') constraints on d_prime
+    prob.add_list_of_constraints(
+        [d_prime[t] >= 0 for t in T],
+        't',
+        'terminals')
+    prob.add_list_of_constraints(
+        [d_prime[t][s2i((u, v))] >=
+         d[s2i((u, t))] - d[s2i((v, t))]
+         for (u, v) in node_couples for t in T],
+        ['u', 'v', 't'],
+        'node couples x terminals')
+    print(prob.solve(solver=solver, verbose=0))
+    return d.value
+
+
+def assignment_solution_lp(d, T, threshold=0.00001):
+    ''' Checks whether the solution returned by the LP is integral, and if it
+    is, returns the assignment defined by d.
+        Args:
+            - d (ndarray): the solution of the SDP
+            - T (list): the terminal nodes
+        Outputs:
+            - if integral : dict: - key: index of the cluster
+                                  - value: list of nodes in the cluster
+            - False otherwise
+    '''
+    rounded_d = np.round(d)
+    gap = np.absolute(rounded_d - d)
+    n = int(math.sqrt(len(d)))
+    rounding = all([gap[idx] < threshold for idx in range(n**2)])
+    distances = sorted(list(np.unique(rounded_d)))
+    assignment = dict()
+    if rounding and distances == [0, 1]:
+        # Then we have an integral solution
+        distance_per_node = np.reshape(rounded_d, (n, n))
+        for t in T:
+            assignment[t] = [u for u in range(n)
+                             if distance_per_node[u, t] == 0]
+        return assignment
+    else:
+        # The solution is not integral
         return False
